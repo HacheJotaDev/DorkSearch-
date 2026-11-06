@@ -1,0 +1,21 @@
+# Dorks de ejemplo — USALOS SOLO sobre dominios con autorización expresa.
+# Uso: python main.py search --domain TU-DOMINIO-AUTORIZADO.com --dorks-file docs/dorks_ejemplo.txt
+# Un dork por línea; las líneas que empiezan por # se ignoran.
+
+# Parámetros numéricos clásicos por tecnología
+site:tu-dominio.com inurl:.php?id=
+site:tu-dominio.com inurl:.asp?id=
+site:tu-dominio.com inurl:.jsp?id=
+
+# Parámetros relacionados con consultas a BD
+site:tu-dominio.com (inurl:id= OR inurl:item= OR inurl:product= OR inurl:category=)
+site:tu-dominio.com inurl:search
+
+# Páginas dinámicas con parámetros
+site:tu-dominio.com inurl:product filetype:php
+site:tu-dominio.com inurl:article filetype:php
+
+# Superficie adicional de reconocimiento
+site:tu-dominio.com (intitle:login OR intitle:signin)
+site:tu-dominio.com intitle:"index of"
+site:tu-dominio.com (filetype:sql OR filetype:bak) (inurl:backup OR inurl:dump)

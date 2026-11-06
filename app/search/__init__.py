@@ -1,0 +1,1 @@
+"""Paquete search del auditor."""

@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# --- Entorno / credenciales (NUNCA subir) ---
+.env
+.env.*
+!.env.example
+
+# --- Datos locales y bases de datos ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Proxies reales (usar solo como plantilla) ---
+# proxies.txt se sube como plantilla; si guardas proxies reales ahí,
+# muévelos a .env o excluye el fichero antes de publicar.
+
+# --- Informes de ejecuciones reales (los ejemplos sí se publican) ---
+reports/*
+!reports/audit_report_example.md
+!reports/audit_report_example.json
+
+# --- IDE / SO ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Pytest / cobertura ---
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,44 @@
+{
+  "search": {
+    "provider": "google_cse",
+    "results_per_page": 10,
+    "max_results_per_dork": 100,
+    "max_total_results": 100000,
+    "max_api_requests_per_day": 5000,
+    "concurrency": 3,
+    "rate_limit_rps": 1.0,
+    "backoff_base_seconds": 0.5,
+    "max_retries": 5,
+    "user_agent": "uds-searcher/1.0 (auditoria autorizada)",
+    "authorized_domains": [],
+    "allow_unrestricted_search": false,
+    "dedupe": true
+  },
+  "proxies": {
+    "file": "proxies.txt",
+    "strategy": "round_robin",
+    "check_url": "https://httpbin.org/ip",
+    "check_timeout": 10.0,
+    "check_concurrency": 10,
+    "max_consecutive_failures": 3,
+    "ban_ttl_seconds": 300.0
+  },
+  "analyzer": {
+    "min_priority_for_sqli_review": 30
+  },
+  "sqli": {
+    "allowed_domains": ["127.0.0.1", "localhost"],
+    "timeout": 10.0,
+    "user_agent": "uds-auditor/1.0 (auditoria autorizada)",
+    "techniques": ["error", "boolean"],
+    "max_payloads_per_param": 12,
+    "max_requests_per_audit": 200
+  },
+  "storage": {
+    "database": "data/urls.db",
+    "batch_size": 500
+  },
+  "export": {
+    "dir": "exports"
+  }
+}

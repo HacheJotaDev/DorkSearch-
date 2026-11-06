@@ -1,0 +1,7 @@
+# Dependencias en tiempo de ejecución
+httpx>=0.27,<1.0
+PySide6>=6.6
+python-dotenv>=1.0
+
+# Pruebas
+pytest>=8.0

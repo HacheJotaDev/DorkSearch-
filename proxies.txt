@@ -1,0 +1,17 @@
+# ============================================================
+# PROXIES RESIDENCIALES ROTATIVOS
+# Formato (una línea por proxy):  IP:PORT:USER:PASSWORD
+# Los entrega tu proveedor de proxies residenciales autorizado.
+# Las líneas que empiezan por # son comentarios y se ignoran.
+# ============================================================
+#
+# EJEMPLO (REEMPLAZAR por datos reales de tu proveedor):
+127.0.0.1:8888:proxyuser:proxypass
+#
+# También se acepta prefijo de esquema opcional:
+# http://192.0.2.10:3128:usuario1:clave1
+#
+# NOTA DE USO RESPONSABLE:
+# La rotación de proxies existe ÚNICAMENTE para respetar los límites de
+# tasa (rate limits) del servicio de búsqueda autorizado. Está PROHIBIDO
+# usar los proxies para evadir CAPTCHAs, bloqueos o controles de acceso.
