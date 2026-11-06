@@ -4,8 +4,8 @@ Herramienta profesional de OSINT y auditoría de seguridad en Python para
 **descubrir miles o millones de URLs con Google Dorks**, priorizar las que
 presentan superficie de consulta a base de datos y **auditar inyección SQL de
 forma 100% NO destructiva** sobre objetivos autorizados — con proxies
-residenciales rotativos, GUI completa, almacenamiento SQLite y exportación
-TXT/CSV/JSON.
+residenciales rotativos, **menú de consola compatible con Termux (Android)**,
+GUI opcional para escritorio, almacenamiento SQLite y exportación TXT/CSV/JSON.
 
 > ## ⚠️ USO RESPONSABLE (léelo)
 > - **SOLO** para auditorías de seguridad con **autorización expresa** del
@@ -32,10 +32,10 @@ TXT/CSV/JSON.
 | 🌐 **Proxies residenciales rotativos** | Formato `IP:PORT:USER:PASSWORD` en `proxies.txt`, autenticación, rotación round-robin/random/least-used, verificación asíncrona, estadísticas por proxy y expulsión temporal de los que fallan. Credenciales nunca en logs. |
 | 🧭 **Analizador de parámetros** | Detecta parámetros GET relacionados con BD (`id`, `item`, `product`, `category`, `search`…), rutas dinámicas y prioriza la revisión (0–100). Estadísticas agregadas. |
 | 🛡️ **Auditoría SQLi** | Lista blanca verificada ANTES de cada petición, detección por errores y booleana, control anti-falsos-positivos, verificación de reproducibilidad, niveles de evidencia (CONFIRMED/LIKELY/POSSIBLE/INFO), remediación con consultas parametrizadas y registro completo para reproducibilidad. |
-| 🖥️ **GUI PySide6** | Panel de estadísticas, editor de dorks, gestor de proxies, tabla de URLs con filtros, panel de auditoría SQLi, barra de progreso, botones Iniciar/Pausar/Reanudar/Detener, registro en vivo y exportación. Nunca bloquea la interfaz (QThread + asyncio). |
+| 🖥️ **GUI PySide6 (opcional)** | Panel de estadísticas, editor de dorks, gestor de proxies, tabla de URLs con filtros, panel de auditoría SQLi, barra de progreso, botones Iniciar/Pausar/Reanudar/Detener, registro en vivo y exportación. Nunca bloquea la interfaz (QThread + asyncio). Solo escritorio: `pip install -r requirements-gui.txt`. |
 | 💾 **Almacenamiento y export** | SQLite con índice de deduplicación, checkpoints de reanudación por dork, cuota por fecha, audit log y hallazgos. Exporta TXT/CSV/JSON en streaming (m millones de filas sin cargar en memoria). |
 | 🧪 **Laboratorio SQLi local** | Servidor HTTP en `127.0.0.1` con datos ficticios: endpoints vulnerables (concatenación) y corregidos (parametrizados) para demostrar la detección y validar la reparación. |
-| ✅ **Calidad** | Python 3.10+/3.12, httpx asíncrono, PySide6, pytest (unitarios + integración), credenciales por variables de entorno, compatible Windows/Linux. |
+| ✅ **Calidad** | Python 3.10+/3.12, httpx asíncrono, pytest (unitarios + integración), credenciales por variables de entorno, **modo consola completo (menú interactivo) compatible con Termux/Android, Linux, Windows y macOS**. |
 
 ---
 
@@ -60,6 +60,17 @@ cp .env.example .env
 ```
 
 > En Linux, si la GUI queja de librerías Qt: `sudo apt install libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1`
+
+### Termux (Android)
+Instalación ligera **sin GUI** (guía completa: [`docs/TERMUX.md`](docs/TERMUX.md)):
+
+```bash
+pkg install -y python git
+pip install -r requirements.txt
+python main.py menu
+```
+
+o todo en uno: `bash scripts/install_termux.sh`
 
 ### Credenciales de la API de búsqueda (una sola vez)
 1. Entra en <https://console.cloud.google.com> → crea un proyecto → habilita **Custom Search API** → crea una **API Key**.
@@ -90,7 +101,29 @@ Las credenciales NUNCA van en el código: solo en `.env` / variables de entorno.
 
 ---
 
-## 4. Uso — GUI (recomendado)
+## 4. Uso — Menú de consola (recomendado · funciona en Termux)
+
+```bash
+python main.py menu
+```
+
+Menú interactivo con **todas** las funciones del programa, sin dependencias
+de GUI (solo `input()`/`print()` + ANSI): ideal para Termux, SSH y servidores.
+Comparte los mismos manejadores que el CLI, por lo que las garantías de
+lista blanca, cuota y no-destructividad son idénticas.
+
+```
+  1) Busqueda masiva de URLs con dorks      6) Iniciar laboratorio SQLi local
+  2) Analizar / priorizar URLs almacenadas  7) Demo completa (lab + auditoria)
+  3) Exportar URLs (TXT / CSV / JSON)       8) Comprobar proxies residenciales
+  4) Estadisticas de la base de datos       9) Ver configuracion activa
+  5) Auditoria SQLi de una URL (no destr.)  0) Salir
+```
+
+En la opción de auditoría el menú pide **confirmación explícita de
+autorización** (escribe `SI`) antes de enviar cualquier petición.
+
+## 5. Uso — GUI (opcional, solo escritorio)
 
 ```bash
 python main.py gui
@@ -102,9 +135,16 @@ python main.py gui
 - **Proxies**: carga `proxies.txt`, estrategia de rotación, verificación asíncrona y estadísticas (credenciales ocultas).
 - **Auditoría SQLi**: lista blanca + URL objetivo + técnicas; incluye botón **“Iniciar laboratorio local”** y **“Generar informe”** (JSON + Markdown en `reports/`).
 
-## 5. Uso — CLI
+## 6. Uso — CLI (subcomandos)
 
 ```bash
+# Menú interactivo (equivalente a todas las opciones anteriores)
+python main.py menu
+
+# Validar proxies.txt (sin red) o probar su conectividad real
+python main.py proxies
+python main.py proxies --check-network
+
 # Buscar URLs (motor completo, reanudable, con export)
 python main.py --config config.json search \
     --domain ejemplo-autorizado.com \
@@ -145,7 +185,7 @@ programa se interrumpe, al relanzar el mismo comando **continúa donde lo dejó*
 
 ---
 
-## 6. Auditoría SQLi — cómo funciona
+## 7. Auditoría SQLi — cómo funciona
 
 1. **Alcance**: `ScopeGuard` verifica la lista blanca ANTES de cada petición; si el objetivo no está autorizado, lanza `ScopeViolation` y NO se envía nada.
 2. **Técnica de errores**: sondas no destructivas (`'`, `"`, `')`, `` ` ``) buscan firmas de error de MySQL, PostgreSQL, MSSQL, Oracle, SQLite o JDBC/ODBC.
@@ -167,26 +207,30 @@ hallazgos. Informe de ejemplo: `reports/audit_report_example.md`.
 
 ---
 
-## 7. Pruebas automatizadas
+## 8. Pruebas automatizadas
 
 ```bash
-pytest -q          # 70 tests: dorks, filtros, proxies, analizador,
+pytest -q          # 82 tests: dorks, filtros, proxies, analizador,
                    # storage, exportadores, detector SQLi (contra el
-                   # laboratorio real) e integración end-to-end
+                   # laboratorio real), integración end-to-end, menú de
+                   # consola y subcomando proxies
 ```
 
 ---
 
-## 8. Estructura del proyecto
+## 9. Estructura del proyecto
 
 ```
 urls-dorks-searcher/
-├── main.py                     # CLI (gui, search, analyze, audit, lab, lab-demo, export, stats)
+├── main.py                     # CLI + menú (menu, proxies, search, analyze, audit, lab, lab-demo, export, stats, gui)
 ├── config.example.json         # configuración de ejemplo
 ├── proxies.txt                 # plantilla IP:PORT:USER:PASSWORD
 ├── .env.example                # plantilla de credenciales
-├── requirements.txt / pyproject.toml
+├── requirements.txt            # núcleo (Termux-compatible)
+├── requirements-gui.txt        # GUI opcional (escritorio)
+├── pyproject.toml
 ├── app/
+│   ├── console_menu.py         # menú interactivo de consola (Termux OK)
 │   ├── config.py  models.py  logging_setup.py
 │   ├── search/    dork_builder.py · api_client.py · engine.py · url_filter.py
 │   ├── proxies/   manager.py
@@ -194,20 +238,21 @@ urls-dorks-searcher/
 │   ├── sqli/      scope.py · detector.py · runner.py · findings.py
 │   │   └── lab/   lab_server.py · lab_data.py
 │   ├── storage/   database.py · exporters.py
-│   ├── gui/       main_window.py · workers.py
+│   ├── gui/       main_window.py · workers.py          (opcional)
 │   └── reporting/ report.py
+├── scripts/install_termux.sh   # instalador automático para Termux
 ├── reports/audit_report_example.*   # informe de auditoría de ejemplo
-├── docs/dorks_ejemplo.txt
+├── docs/TERMUX.md · docs/dorks_ejemplo.txt
 └── tests/                      # suite pytest completa
 ```
 
-## 9. Solución de problemas
+## 10. Solución de problemas
 
 | Problema | Solución |
 |---|---|
 | `Faltan GOOGLE_API_KEY / GOOGLE_CSE_ID` | Copia `.env.example` a `.env` y rellena las credenciales. |
 | `HTTP 429` en los logs | Es el límite de la API: el motor aplica backoff y respeta tu cuota diaria; baja `rate_limit_rps`. |
 | `Objetivo FUERA de la lista blanca autorizada` | Añade el dominio a la lista blanca SOLO si tienes autorización. |
-| La GUI no arranca en Linux | `sudo apt install libegl1 libgl1 libxkbcommon0` |
+| `PySide6` no está instalado (GUI) | Es opcional: `pip install -r requirements-gui.txt` o usa el menú de consola `python main.py menu`. En Termux la GUI no está soportada. |
 | Un proxy se expulsa | Normal tras N fallos: queda de baja temporal `ban_ttl_seconds` y se reintegra solo. |
 | Millones de URLs | Todo es streaming (lotes + keyset); no subas `batch_size` por encima de ~2000. |

@@ -1,0 +1,7 @@
+# ============================================================
+# GUI opcional (SOLO escritorio: Windows / Linux / macOS)
+# NO instalar en Termux/Android: PySide6 no tiene soporte allí.
+# En Termux (y en servidores sin entorno gráfico) usa el menú:
+#   python main.py menu
+# ============================================================
+PySide6>=6.6

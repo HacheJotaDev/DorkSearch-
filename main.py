@@ -4,7 +4,7 @@
 CLI principal. Uso responsable: SOLO para auditorías de seguridad AUTORIZADAS.
 
 Comandos:
-    gui            Interfaz gráfica PySide6
+    menu           MENÚ INTERACTIVO DE CONSOLA (funciona en Termux/Android)
     search         Motor de descubrimiento de URLs con dorks
     analyze        Analiza/prioriza los parámetros de las URLs almacenadas
     audit          Auditoría SQLi no destructiva de una URL autorizada
@@ -12,17 +12,21 @@ Comandos:
     lab-demo       Demo completa: laboratorio + auditoría + informe de ejemplo
     export         Exporta las URLs almacenadas (TXT/CSV/JSON)
     stats          Estadísticas de la base de datos
+    proxies        Valida y comprueba los proxies de proxies.txt
+    gui            Interfaz gráfica PySide6 (OPCIONAL, no disponible en Termux)
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
 from app.config import AppConfig, load_config
+from app.console_menu import VERSION
 
 
 def _setup():
@@ -30,12 +34,89 @@ def _setup():
     setup_logging()
 
 
+# --------------------------------------------------------------------------- MENU
+def cmd_menu(args, cfg: AppConfig) -> int:
+    """Menú interactivo de consola: 100% de las funciones, sin GUI.
+
+    Es el modo recomendado en Termux/Android y en cualquier servidor sin
+    entorno gráfico. Comparte manejadores con el CLI, por lo que todas las
+    garantías (lista blanca, cuota, no-destructividad) son idénticas.
+    """
+    _setup()
+    from app.console_menu import run_menu
+
+    handlers = {
+        "search": cmd_search, "analyze": cmd_analyze, "export": cmd_export,
+        "stats": cmd_stats, "audit": cmd_audit, "lab": cmd_lab,
+        "lab-demo": cmd_lab_demo, "proxies": cmd_proxies,
+    }
+    return run_menu(cfg, handlers)
+
+
+# --------------------------------------------------------------------------- PROXIES
+def cmd_proxies(args, cfg: AppConfig) -> int:
+    """Valida proxies.txt y (opcionalmente) prueba la conectividad real."""
+    _setup()
+    from app.proxies.manager import ProxyManager, ProxyManagerError
+
+    try:
+        mgr = ProxyManager.load(
+            cfg.proxies.file, strategy=cfg.proxies.strategy,
+            max_consecutive_failures=cfg.proxies.max_consecutive_failures,
+            ban_ttl_seconds=cfg.proxies.ban_ttl_seconds)
+    except ProxyManagerError as e:
+        sys.exit(str(e))
+
+    total = len(mgr)
+    if total == 0:
+        print(f"{cfg.proxies.file}: 0 proxies válidos. Formato: IP:PORT:USER:PASSWORD "
+              "(las líneas con # son comentarios).")
+        return 0
+    print(f"Proxies cargados de {cfg.proxies.file}: {total} (formato IP:PORT:USER:PASSWORD)")
+    print(f"Estrategia de rotación: {cfg.proxies.strategy}")
+    print("\nEstado (credenciales enmascaradas, nunca en claro):")
+    for row in mgr.summary():
+        estado = row["state"]
+        marca = "OK " if estado == "ok" else "!! "
+        print(f"  {marca}{row['proxy']:30s} peticiones={row['requests']:<6} "
+              f"exito={row['successes']:<5} fallo={row['failures']:<5} "
+              f"lat_media={row['avg_latency']}s")
+
+    if args.no_network:
+        print("\nModo sin red: solo se ha validado el formato. "
+              "Usa --check-network (o el menú, opción 8) para probar conectividad.")
+        return 0
+
+    print(f"\nProbando conectividad de {total} proxies "
+          f"contra {cfg.proxies.check_url} (timeout {cfg.proxies.check_timeout}s)...")
+    resultados = asyncio.run(mgr.check_all(
+        check_url=cfg.proxies.check_url, timeout=cfg.proxies.check_timeout,
+        concurrency=cfg.proxies.check_concurrency))
+    vivos = 0
+    for r in resultados:
+        if r["ok"]:
+            vivos += 1
+            print(f"  OK   {r['proxy']:30s} latencia={r['latency']}s")
+        else:
+            print(f"  FALLO {r['proxy']:29s} {r['error']}")
+    print(f"\nResumen: {vivos}/{len(resultados)} proxies operativos. "
+          "La rotación existe SOLO para respetar los límites de tasa del servicio "
+          "de búsqueda autorizado.")
+    return 0
+
+
 # --------------------------------------------------------------------------- GUI
 def cmd_gui(args, cfg: AppConfig) -> int:
+    if os.environ.get("TERMUX_VERSION"):
+        sys.exit("PySide6 (GUI) no está soportado en Termux/Android.\n"
+                 "Usa el menú de consola, que tiene TODAS las funciones:\n"
+                 "  python main.py menu")
     try:
         from PySide6.QtWidgets import QApplication
     except ImportError:
-        sys.exit("PySide6 no está instalado. Ejecuta: pip install -r requirements.txt")
+        sys.exit("PySide6 no está instalado (dependencia opcional de la GUI).\n"
+                 "  Instalación GUI: pip install -r requirements-gui.txt\n"
+                 "  O usa el modo consola completo:  python main.py menu")
     from app.gui.main_window import MainWindow
 
     qt_app = QApplication(sys.argv)
@@ -261,13 +342,26 @@ def build_parser() -> argparse.ArgumentParser:
         description="Advanced URL Discovery & SQLi Security Auditor (solo uso autorizado)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    p.add_argument("--version", action="version",
+                   version=f"URLS GOOGLE DORKS SEARCHER v{VERSION} (modo consola "
+                           "compatible Termux)")
     p.add_argument("--config", default=None, help="fichero JSON de configuración "
                    "(p.ej. config.example.json)")
     p.add_argument("--db", default=None, help="ruta de la base de datos SQLite "
                    "(por defecto: config storage.database)")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    g = sub.add_parser("gui", help="interfaz gráfica PySide6")
+    m = sub.add_parser("menu", help="menú interactivo de consola "
+                                    "(compatible Termux/Android)")
+
+    pr = sub.add_parser("proxies", help="valida y comprueba proxies.txt")
+    pr.add_argument("--no-network", action="store_true", default=True,
+                    help="solo validar formato, sin probar conectividad (por defecto)")
+    pr.add_argument("--check-network", dest="no_network", action="store_false",
+                    help="probar la conectividad real de cada proxy")
+
+    g = sub.add_parser("gui", help="interfaz gráfica PySide6 (opcional; no disponible "
+                                   "en Termux)")
 
     s = sub.add_parser("search", help="motor de descubrimiento de URLs con dorks")
     s.add_argument("--dork", action="append", default=None, help="dork literal (repetible)")
@@ -319,7 +413,8 @@ def main() -> int:
     except Exception as e:
         sys.exit(f"Error de configuración: {e}")
     handlers = {
-        "gui": cmd_gui, "search": cmd_search, "analyze": cmd_analyze,
+        "menu": cmd_menu, "proxies": cmd_proxies, "gui": cmd_gui,
+        "search": cmd_search, "analyze": cmd_analyze,
         "audit": cmd_audit, "lab": cmd_lab, "lab-demo": cmd_lab_demo,
         "export": cmd_export, "stats": cmd_stats,
     }

@@ -1,6 +1,6 @@
 # Informe de auditoría SQLi (no destructiva)
 
-- **Generado:** 2026-11-06T17:19:30+00:00
+- **Generado:** 2026-11-06T18:26:59+00:00
 - **Herramienta:** Advanced URL Discovery & SQLi Security Auditor
 - **Contexto:** {"targets": 4, "origen": "lab-demo", "entorno": "laboratorio LOCAL con datos ficticios (127.0.0.1)"}
 
@@ -16,12 +16,12 @@
 
 ## Hallazgos
 
-### 1. [CONFIRMED] http://127.0.0.1:34675/vulnerable/product?id=1 — parámetro `id`
+### 1. [CONFIRMED] http://127.0.0.1:39059/vulnerable/product?id=1 — parámetro `id`
 
 - **Técnica:** error · **Motor:** SQLite
 - **Detalle:** El parámetro 'id' provoca un error visible de SQLite al alterar su valor (sonda no destructiva '''). Reproducible: sí.
 - **Evidencia:** `{"error": "unrecognized token: \"'1''\"", "sql": "SELECT id, name, price, stock FROM prod`
-- **Snapshot de la petición (reproducibilidad):** `{"url": "http://127.0.0.1:34675/vulnerable/product?id=1%27", "method": "GET", "status": 500, "length": 111, "elapsed_ms": 3.5, "probe": "'", "repeat_status": 500}`
+- **Snapshot de la petición (reproducibilidad):** `{"url": "http://127.0.0.1:39059/vulnerable/product?id=1%27", "method": "GET", "status": 500, "length": 111, "elapsed_ms": 3.5, "probe": "'", "repeat_status": 500}`
 - **Recomendaciones:**
     - Corrige usando consultas parametrizadas / prepared statements: NUNCA concatenes entrada del usuario en el SQL (véase el parámetro 'id' inyectado en el hallazgo).
     - Motor de base de datos detectado: SQLite.
@@ -37,12 +37,12 @@
     -   C# (ADO.NET): using var cmd = new SqlCommand("SELECT * FROM products WHERE id = @id", conn); cmd.Parameters.Add("@id", SqlDbType.Int).Value = productId;
     -   Node.js (pg/mysql2): await pool.query("SELECT * FROM products WHERE id = $1", [productId]);
 
-### 2. [CONFIRMED] http://127.0.0.1:34675/vulnerable/search?q=teclado — parámetro `q`
+### 2. [CONFIRMED] http://127.0.0.1:39059/vulnerable/search?q=teclado — parámetro `q`
 
 - **Técnica:** error · **Motor:** SQLite
 - **Detalle:** El parámetro 'q' provoca un error visible de SQLite al alterar su valor (sonda no destructiva '''). Reproducible: sí.
 - **Evidencia:** `{"error": "unrecognized token: \"'\"", "sql": "SELECT id, name, price FROM products WHERE`
-- **Snapshot de la petición (reproducibilidad):** `{"url": "http://127.0.0.1:34675/vulnerable/search?q=teclado%27", "method": "GET", "status": 500, "length": 114, "elapsed_ms": 2.6, "probe": "'", "repeat_status": 500}`
+- **Snapshot de la petición (reproducibilidad):** `{"url": "http://127.0.0.1:39059/vulnerable/search?q=teclado%27", "method": "GET", "status": 500, "length": 114, "elapsed_ms": 2.5, "probe": "'", "repeat_status": 500}`
 - **Recomendaciones:**
     - Corrige usando consultas parametrizadas / prepared statements: NUNCA concatenes entrada del usuario en el SQL (véase el parámetro 'id' inyectado en el hallazgo).
     - Motor de base de datos detectado: SQLite.
